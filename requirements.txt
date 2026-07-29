@@ -1,0 +1,25 @@
+# Healthcare AI Chatbot - Dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Web UI ─────────────────────────────────────────────────────────────────────
+streamlit==1.35.0
+
+# ── LLM & Orchestration ────────────────────────────────────────────────────────
+langchain==1.3.14
+langchain-community==0.4.2
+langchain-core==1.5.2
+langchain-groq==1.1.3
+langchain-text-splitters==1.1.2
+
+# ── Embeddings (Ollama local) ──────────────────────────────────────────────────
+langchain-ollama==1.1.0
+ollama==0.6.2
+
+# ── PDF Parsing ────────────────────────────────────────────────────────────────
+pypdf==4.3.1
+
+# ── Vector Store ───────────────────────────────────────────────────────────────
+chromadb==0.5.3
+
+# ── Environment & Utilities ────────────────────────────────────────────────────
+python-dotenv==1.0.1
