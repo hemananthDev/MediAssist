@@ -12,7 +12,7 @@ Re-run any time you add new documents to data/ or pdfs/.
 """
 
 import logging
-import subprocess
+import shutil
 import sys
 import uuid
 import warnings
@@ -44,13 +44,14 @@ EMBED_BATCH     = 32
 
 
 def force_delete_dir(path: Path) -> None:
-    """Delete a directory via PowerShell to bypass Windows file locks."""
+    """
+    Delete a directory cross-platform.
+    Uses shutil.rmtree with ignore_errors so stale files don't abort the run.
+    On Windows, ChromaDB file locks are released once the previous Python
+    process exits — so this is safe to call at the start of a fresh run.
+    """
     if path.exists():
-        subprocess.run(
-            ["powershell", "-Command",
-             f"Remove-Item -Recurse -Force '{str(path)}' -ErrorAction SilentlyContinue"],
-            capture_output=True,
-        )
+        shutil.rmtree(path, ignore_errors=True)
 
 
 def load_txt_documents(data_dir: Path) -> list:

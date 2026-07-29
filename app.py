@@ -618,6 +618,14 @@ for msg in st.session_state.messages:
 # ── Input form ─────────────────────────────────────────────────────────────────
 st.divider()
 
+SAFE_ERROR_RESPONSE = {
+    "answer":     "I encountered an unexpected issue processing your request. "
+                  "Please try again or rephrase your question.",
+    "sources":    [],
+    "confidence": "N/A",
+    "category":   "error",
+}
+
 # Handle suggestion button clicks — process directly, no form needed
 if "pending_question" in st.session_state:
     query = st.session_state.pop("pending_question")
@@ -625,13 +633,8 @@ if "pending_question" in st.session_state:
     with st.spinner("MediAssist is thinking..."):
         try:
             response = st.session_state.chatbot.chat(query)
-        except Exception as e:
-            response = {
-                "answer":     f"An error occurred: {e}",
-                "sources":    [],
-                "confidence": "N/A",
-                "category":   "error",
-            }
+        except Exception:
+            response = SAFE_ERROR_RESPONSE
     st.session_state.messages.append({
         "role":       "assistant",
         "content":    response["answer"],
@@ -664,13 +667,8 @@ if submitted and user_input.strip():
     with st.spinner("MediAssist is thinking..."):
         try:
             response = st.session_state.chatbot.chat(query)
-        except Exception as e:
-            response = {
-                "answer":     f"An error occurred: {e}",
-                "sources":    [],
-                "confidence": "N/A",
-                "category":   "error",
-            }
+        except Exception:
+            response = SAFE_ERROR_RESPONSE
 
     st.session_state.messages.append({
         "role":       "assistant",

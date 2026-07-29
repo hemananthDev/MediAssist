@@ -37,6 +37,7 @@ from src.utils import (
     is_off_topic,
     is_safety_violation,
     is_low_confidence_answer,
+    is_greeting,
 )
 
 # ── Environment ────────────────────────────────────────────────────────────────
@@ -117,6 +118,19 @@ class HealthChatbot:
                 "sources":    [],
                 "confidence": "N/A",
                 "category":   "safety",
+            }
+
+        if is_greeting(user_message):
+            return {
+                "answer":     (
+                    "Hello! I'm MediAssist, your AI healthcare information assistant. "
+                    "I can help you with questions about symptoms, diseases, nutrition, "
+                    "lifestyle, preventive care, and first aid.\n\n"
+                    "What healthcare topic can I help you with today?"
+                ),
+                "sources":    [],
+                "confidence": "N/A",
+                "category":   "greeting",
             }
 
         if is_diagnosis_request(user_message):

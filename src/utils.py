@@ -2,84 +2,134 @@
 src/utils.py
 ------------
 Guardrail checks and shared utility functions.
+
+Design principle: prefer false negatives over false positives.
+It's better to let a borderline query reach the LLM (which has its own
+system-prompt rules) than to wrongly block a legitimate healthcare question.
 """
 
-# ── Keyword lists ──────────────────────────────────────────────────────────────
+import re
 
+# ── Emergency keywords (life-threatening — these must stay broad) ──────────────
 EMERGENCY_KEYWORDS = [
     "chest pain", "heart attack", "stroke", "can't breathe", "cannot breathe",
     "difficulty breathing", "not breathing", "unconscious", "unresponsive",
     "severe bleeding", "overdose", "poisoning", "suicid", "choking",
 ]
 
-# Phrases that indicate a user wants a personal diagnosis
-DIAGNOSIS_KEYWORDS = [
-    "do i have", "have i got", "is it cancer", "is this cancer",
-    "am i diabetic", "do i have diabetes", "what disease do i have",
-    "diagnose me", "what illness do i have", "what condition do i have",
+# ── Diagnosis keywords — only fire on explicit personal diagnosis requests ─────
+# Kept specific to avoid blocking nutrition/lifestyle questions that use
+# similar phrasing (e.g. "do i have to avoid dairy", "do i need vitamins")
+DIAGNOSIS_PATTERNS = [
+    r"\bdo i have\s+(cancer|diabetes|hiv|aids|tb|tuberculosis|covid|flu|malaria|dengue|typhoid|asthma|arthritis|depression|anxiety|hypertension|a (disease|condition|illness|disorder))\b",
+    r"\bhave i got\s+(cancer|diabetes|hiv|aids|a (disease|condition|illness))\b",
+    r"\bdiagnose me\b",
+    r"\bwhat (disease|illness|condition|disorder) do i have\b",
+    r"\bam i (diabetic|hypertensive|infected|sick with)\b",
+    r"\bis (it|this) (cancer|diabetes|hiv|a tumor|terminal)\b",
 ]
 
-# Phrases about changing or stopping medication
-MEDICATION_KEYWORDS = [
-    "should i stop", "can i stop", "stop taking my", "stop my medication",
-    "stop my medicine", "change my medication", "change my medicine",
-    "should i take", "can i take", "should i increase", "should i decrease",
+# ── Medication change keywords — only fire on explicit change/stop requests ────
+# Avoids blocking: "what vitamins should I take", "can I take ginger for nausea"
+# Only blocks: "should I stop my medication", "can I stop taking my pills"
+MEDICATION_PATTERNS = [
+    r"\bstop (taking|my) (my )?(medication|medicine|pills|tablets|drugs|prescription|dose|dosage)\b",
+    r"\bchange (my )?(medication|medicine|prescription)\b",
+    r"\bshould i (stop|quit|discontinue|reduce|increase|double) (my )?(medication|medicine|pills|tablets|prescription|dose)\b",
+    r"\bcan i (stop|quit|discontinue) (taking )?(my )?(medication|medicine|pills|tablets)\b",
+    r"\bshould i (increase|decrease|reduce|adjust) (my )?(dose|dosage)\b",
 ]
 
-# Clearly non-healthcare topics
+# ── Off-topic keywords — only clearly non-healthcare domains ──────────────────
+# Removed: "football", "sports score", "film" — injury/health questions
+# often mention these contexts. Kept only unambiguous non-health topics.
 OFF_TOPIC_KEYWORDS = [
-    "stock market", "cryptocurrency", "bitcoin", "ethereum",
-    "election", "politics", "political", "president",
-    "movie", "film", "netflix", "music", "song", "album",
-    "weather forecast", "sports score", "football", "cricket score",
-    "programming", "write code", "software bug",
+    "stock market", "stock price", "share price",
+    "cryptocurrency", "bitcoin", "ethereum", "crypto trading",
+    "election result", "election campaign", "who won the election",
+    "movie review", "film review", "netflix show", "tv series",
+    "music album", "song lyrics",
+    "weather forecast", "weather tomorrow",
+    "write code", "debug code", "software bug", "programming tutorial",
 ]
 
-# Harmful / safety-rejection topics
+# ── Safety keywords — harmful intent ─────────────────────────────────────────
 SAFETY_KEYWORDS = [
-    "bomb", "weapon", "explosive", "hack", "poison someone",
-    "how to kill", "hurt someone",
+    "how to make a bomb", "build a weapon", "make explosives",
+    "poison someone", "how to kill someone", "how to hurt someone",
+    "hack into", "create malware",
+]
+
+# ── Greeting keywords — short social exchanges ────────────────────────────────
+GREETING_PATTERNS = [
+    r"^(hi|hello|hey|howdy|greetings|good (morning|afternoon|evening|night))[\s!?.]*$",
+    r"^how are you[\s!?.]*$",
+    r"^what('s| is) up[\s!?.]*$",
+    r"^(thanks|thank you|ty|thx)[\s!?.]*$",
+    r"^(bye|goodbye|see you|cya)[\s!?.]*$",
 ]
 
 
 # ── Guardrail functions ────────────────────────────────────────────────────────
 
 def is_emergency(query: str) -> bool:
+    """Broad match — life safety takes priority over false positives."""
     q = query.lower()
     return any(kw in q for kw in EMERGENCY_KEYWORDS)
 
 
 def is_diagnosis_request(query: str) -> bool:
+    """
+    Only fires on explicit personal diagnosis requests for named conditions.
+    General questions like 'do i have to avoid dairy' are NOT blocked.
+    """
     q = query.lower()
-    return any(kw in q for kw in DIAGNOSIS_KEYWORDS)
+    return any(re.search(pattern, q) for pattern in DIAGNOSIS_PATTERNS)
 
 
 def is_medication_change_request(query: str) -> bool:
+    """
+    Only fires when user explicitly asks to stop/change/adjust a medication.
+    Questions like 'what vitamins should I take' are NOT blocked.
+    """
     q = query.lower()
-    return any(kw in q for kw in MEDICATION_KEYWORDS)
+    return any(re.search(pattern, q) for pattern in MEDICATION_PATTERNS)
 
 
 def is_off_topic(query: str) -> bool:
+    """
+    Only fires on clearly non-healthcare domains.
+    Sports/activity injuries, film-related health questions are NOT blocked.
+    """
     q = query.lower()
     return any(kw in q for kw in OFF_TOPIC_KEYWORDS)
 
 
 def is_safety_violation(query: str) -> bool:
+    """Fires only on explicit harmful-intent phrases."""
     q = query.lower()
     return any(kw in q for kw in SAFETY_KEYWORDS)
 
 
+def is_greeting(query: str) -> bool:
+    """Detect short social greetings that don't need RAG retrieval."""
+    q = query.strip().lower()
+    return any(re.search(pattern, q) for pattern in GREETING_PATTERNS)
+
+
 def is_low_confidence_answer(answer: str) -> bool:
     """
-    Detect if the LLM itself indicated it couldn't find an answer,
-    so the UI can show the fallback confidence state.
+    Detect if the LLM indicated it couldn't find an answer.
+    Only checks the first 15 words to avoid discarding nuanced responses
+    that happen to contain hedging language mid-sentence.
     """
+    first_words = " ".join(answer.strip().split()[:15]).lower()
     low_confidence_phrases = [
         "i couldn't find",
+        "i could not find",
         "not in the context",
         "i don't have information",
-        "i'm not sure",
         "no information available",
+        "i was unable to find",
     ]
-    a = answer.lower()
-    return any(phrase in a for phrase in low_confidence_phrases)
+    return any(phrase in first_words for phrase in low_confidence_phrases)
