@@ -33,11 +33,11 @@ DIAGNOSIS_PATTERNS = [
 # Avoids blocking: "what vitamins should I take", "can I take ginger for nausea"
 # Only blocks: "should I stop my medication", "can I stop taking my pills"
 MEDICATION_PATTERNS = [
-    r"\bstop (taking|my) (my )?(medication|medicine|pills|tablets|drugs|prescription|dose|dosage)\b",
-    r"\bchange (my )?(medication|medicine|prescription)\b",
-    r"\bshould i (stop|quit|discontinue|reduce|increase|double) (my )?(medication|medicine|pills|tablets|prescription|dose)\b",
-    r"\bcan i (stop|quit|discontinue) (taking )?(my )?(medication|medicine|pills|tablets)\b",
-    r"\bshould i (increase|decrease|reduce|adjust) (my )?(dose|dosage)\b",
+    r"\bstop (taking |my )(my )?(\w+\s+){0,3}(medication|medicine|pills|tablets|drugs|prescription|dose|dosage)\b",
+    r"\bchange (my )?(\w+\s+){0,3}(medication|medicine|prescription)\b",
+    r"\bshould i (stop|quit|discontinue|reduce|increase|double) (taking )?(my )?(\w+\s+){0,3}(medication|medicine|pills|tablets|prescription|dose|dosage)\b",
+    r"\bcan i (stop|quit|discontinue) (taking )?(my )?(\w+\s+){0,3}(medication|medicine|pills|tablets)\b",
+    r"\bshould i (increase|decrease|reduce|adjust) (my )?(\w+\s+){0,3}(dose|dosage)\b",
 ]
 
 # ── Off-topic keywords — only clearly non-healthcare domains ──────────────────
