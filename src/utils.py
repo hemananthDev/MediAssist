@@ -47,10 +47,10 @@ OFF_TOPIC_KEYWORDS = [
     "stock market", "stock price", "share price",
     "cryptocurrency", "bitcoin", "ethereum", "crypto trading",
     "election result", "election campaign", "who won the election",
-    "movie review", "film review", "netflix show", "tv series",
+    "movie review", "film review", "review this movie", "netflix show", "tv series",
     "music album", "song lyrics",
     "weather forecast", "weather tomorrow",
-    "write code", "debug code", "software bug", "programming tutorial",
+    "write code", "debug code", "debug my", "software bug", "programming tutorial",
 ]
 
 # ── Safety keywords — harmful intent ─────────────────────────────────────────
